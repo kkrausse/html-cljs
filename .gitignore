@@ -2,3 +2,5 @@ node_modules/
 .shadow-cljs/
 */public/js
 package-lock.json
+target/
+pom.xml

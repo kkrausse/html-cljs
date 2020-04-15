@@ -3,7 +3,8 @@
   need to fix the child element problem and force id's on child elements
   because i'm just using an inefficient algorithm rn"
   (:require-macros [html-cljs.html :refer [component cmp]])
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [clojure.walk]))
 
 (declare render-to-state refresh steralized replace-el clear-children rerender-children)
 

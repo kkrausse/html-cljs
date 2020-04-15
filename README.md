@@ -11,4 +11,6 @@ elements to
 
 ## Running / Publishing
 
+publish
 
+    lein deploy clojars
