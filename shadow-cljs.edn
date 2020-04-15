@@ -1,0 +1,28 @@
+;; shadow-cljs configuration
+{:source-paths
+ ["src"]
+
+ :dependencies
+ [[org.clojure/core.async "1.0.567"]
+  [cider/cider-nrepl "0.22.4"]]
+
+ :nrepl
+ {:port 3333}
+ 
+ :js-options {:js-provider :shadow}
+ 
+ :builds
+ {:app
+  {:target :browser
+   :output-dir "public/js"
+   :asset-path "/js"
+   
+   :modules
+   {:main
+    {:entries [shadow-cljs.core]}}
+   
+   :devtools
+    {
+     :repl-pprint true
+     :http-root "public"
+     :http-port 8020}}}}
