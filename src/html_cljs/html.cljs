@@ -8,6 +8,11 @@
 
 (declare render-to-state refresh steralized replace-el clear-children rerender-children)
 
+(defn set-callbacks [el [event-name f & others]]
+  (if (not (nil? event-name))
+    (.addEventListener el event-name f)
+    (set-callbacks el others)))
+
 ; adds :el to the state atom and its children this
 (defn domify [vdom-state-atm]
   "this creates an html element for the vdom state and its children.
@@ -31,10 +36,11 @@
                    :input-type #(set! (.-type el) %)
                    :identifier identity ;nothing. used purely to trick the rerender alg
                    :class #(set! (.-className el) %)
+                   :elem-props #(doseq [[k v] %]
+                                 (aset el k v))
                    :style #(doseq [[k v] %]
                              (aset (.-style el) k v))
-                   :on (fn [[event-name f]]
-                         (.addEventListener el event-name #(f %)))
+                   :on #(set-callbacks el %)
                    :href #(set! (.-href el) %)
                    :content #(set! (.-innerHTML el) %)}]
     (doseq [[k v] node]
@@ -71,9 +77,13 @@
       #_(prn "comparing old: " (steralized old-render) " to new " (steralized new-render))
       ; compare and remount if necessary
       (if (= (steralized old-render) (steralized new-render))
-        (doseq [[old-child new-child] (map vector (old-vdom :vdom-children) (new-vdom :vdom-children))]
-          (swap! new-child #(merge @old-child %))
-          (refresh new-child @old-child))
+        (do
+          ; if same, reset the callbacks! might be a performance hit, but fuck it
+          ; might think about comparing the hash of the functions if it's really a problem
+          (set-callbacks (old-vdom :el) (new-render :on))
+          (doseq [[old-child new-child] (map vector (old-vdom :vdom-children) (new-vdom :vdom-children))]
+            (swap! new-child #(merge @old-child %))
+            (refresh new-child @old-child)))
         (replace-el (old-vdom :el) (domify vdom-atm)))))
   ([vdom-atm]
     (let [vstate @vdom-atm]
