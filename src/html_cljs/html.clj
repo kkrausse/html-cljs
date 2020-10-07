@@ -1,28 +1,32 @@
-(ns html-cljs.html)
+(ns html-cljs.html
+  (:require [clojure.walk :as w]
+            [html-cljs.hooks :refer [mkhook]]))
 
-(defmacro component [hooks & body]
-  (let [vdom-state-sym `vdom-state#
-        instance-hooks `hook-instances#
-        lhs (take-nth 2 hooks)
-        rhs (take-nth 2 (rest hooks))]
-   `(fn [~vdom-state-sym]
-      (let [~instance-hooks [~@rhs]]
-        (fn []
-           ~(if (not-empty lhs)
-             `(let [[~@lhs] (map #(% ~vdom-state-sym) ~instance-hooks)]
-               ~@body)
-             `(do ~@body)))))))
 
-(defmacro cmp [hooks data & children]
-  (let [vdom-state-sym `vdom-state#
-        instance-hooks `hook-instances#
-        lhs (take-nth 2 hooks)
-        rhs (take-nth 2 (rest hooks))]
-   `(fn [~vdom-state-sym]
-      (let [~instance-hooks [~@rhs]]
-        (fn []
-           ~(if (not-empty lhs)
-             `(let [[~@lhs] (map #(% ~vdom-state-sym) ~instance-hooks)]
-               (assoc ~data :children (flatten [~@children])))
-             `(assoc ~data :children (flatten [~@children]))))))))
 
+;TODO  defrecord for components and hooks so you can use isa? to do fancy shit
+; and then you won't need hooks to have a special spot in the signature!
+(defmacro make-children [children]
+  `(map vector
+                 (map (fn [[c# ~'& ~'_]]
+                        (if (symbol? c#)
+                          (do (print "wow. got symbol" c#)
+                              c#)
+                          c#)
+                        c#)
+                      ~children)
+                 (map rest ~children)))
+
+(defmacro cmp
+  "create component prettily. invoking the hook thing for the component itself"
+  [props & args]
+  (let [[hooks-or-data data-or-children or-children] args
+        [hooks data children]
+        (if (vector? hooks-or-data)
+          [hooks-or-data data-or-children (map identity or-children)]
+          [[] hooks-or-data (map identity data-or-children)])
+        childs (map vector (map first children) (map #(vec (rest %)) children))]
+    `(mkhook ~props ~hooks
+             (html-cljs.html/map->ElementInfo
+               (assoc ~data
+                      :children (make-children ~children))))))

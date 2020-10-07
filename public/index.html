@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <!-- <link rel="stylesheet" href="/js/deps/material-design-lite/material.min.css"> -->
+  <!-- <script src="/js/deps/material-design-lite/material.min.js"></script> -->
+  <title>HTML-Cljs Demo</title>
+  <style>
+    html { margin: 0; width: 100%; height: 100%; }
+    body { margin: 0; width: 100%; height: 100%; }
+    #app { width: 100%; min-height: 100%; text-align: center;}
+    canvas { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="app" style="width: 100%; height: 100%;"></div>
+  <script src="/js/main.js"></script>
+  <script>
+    window.onload = () => {
+      html_cljs.demo.init();
+    }
+  </script>
+</body>
+</html>

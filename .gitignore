@@ -1,6 +1,8 @@
 node_modules/
 .shadow-cljs/
-*/public/js
+public/js
 package-lock.json
 target/
 pom.xml
+js
+.metals

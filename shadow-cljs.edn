@@ -12,17 +12,20 @@
  :js-options {:js-provider :shadow}
  
  :builds
- {:app
+ {:lib
   {:target :browser
    :output-dir "public/js"
    :asset-path "/js"
    
    :modules
    {:main
-    {:entries [shadow-cljs.core]}}
+    {:entries [html-cljs.demo
+               html-cljs.hooks
+               html-cljs.html]
+     :init-fn html-cljs.demo/init}}
    
    :devtools
-    {
-     :repl-pprint true
+    {:repl-pprint true
+     :after-load html-cljs.demo/init
      :http-root "public"
      :http-port 8020}}}}

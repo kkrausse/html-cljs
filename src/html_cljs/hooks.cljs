@@ -8,16 +8,49 @@
   creation. This is so the vdom-state atom may be passed in and used by the
   hook without the user ever knowing about the inner workings/lifecycle of the
   library."
-  (:require [html-cljs.html :as html]))
+  (:require-macros [html-cljs.hooks :refer [mkhook]])
+  (:require [html-cljs.html :as html]
+            [html-cljs.lifecycle :as lifecycle]))
 
-(defn use-state [init]
-  (let [state (atom init)]
-    (fn [vdom-state]
-      [@state
-       (fn [swap-state]
-         (swap! state swap-state)
-         (html/refresh vdom-state))])))
 
-(defn use-dom-el []
-  (fn [vdom-state]
-    #(@vdom-state :el)))
+(defn use-state [clc]
+  (let [zeroth-value (symbol 'html-cljs.hooks 'rarespare)
+        state-atom (atom zeroth-value)]
+    (fn [initial-state]
+      (if (= @state-atom zeroth-value)
+        (reset! state-atom initial-state))
+      [(fn [] @state-atom)
+       (fn [swap]
+         (swap! state-atom swap)
+         (lifecycle/refresh clc))])))
+
+(defn use-effect [clc]
+  (let [initialized (atom false)
+        cleanup-func (atom nil)]
+    (fn []
+      (fn [user-func]
+        (if (not @initialized)
+          (do
+            (lifecycle/on-mount clc (fn [] (reset! cleanup-func (user-func))))
+            (lifecycle/on-destroy clc (fn [] (if (some? @cleanup-func)
+                                               (@cleanup-func))))
+            (reset! initialized true)))))))
+
+(def use-interval
+  (mkhook [interval] [[get-cnt set-cnt] (use-state 0)
+                      [get-interval set-interval] (use-state nil)
+                      set-effect (use-effect)]
+          (let [start-timer (fn []
+                              (if (nil? (get-interval))
+                                (set-interval
+                                  (fn [_] (js/setInterval
+                                            (fn [] (set-cnt inc)) interval)))))
+                stop-timer (fn [] (if (some? (get-interval))
+                                    (do (js/clearInterval (get-interval))
+                                        (set-interval (fn [_] nil)))))
+                toggle (fn []
+                         (if (nil? (get-interval)) (start-timer) (stop-timer)))]
+            (set-effect (fn []
+                          (start-timer)
+                          stop-timer))
+            [(get-cnt) toggle])))
