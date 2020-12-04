@@ -11,6 +11,8 @@
            vdom node (nor can it if it wanted to since it doesn't have
            access to the original component function that made this node)")
   (getprops [this] "gets the props for refresh")
+  (add-hook [this] "gets the context for a user hook. Each time the hook is called
+                   for this component, this will return the same atom.")
   (on-mount [this f] "register callback on mounting")
   (on-destroy [this f] "calls f when the vdom element is destroyed"))
 

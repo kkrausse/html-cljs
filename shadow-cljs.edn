@@ -21,6 +21,7 @@
    {:main
     {:entries [html-cljs.demo
                html-cljs.hooks
+               html-cljs.nouns
                html-cljs.html]
      :init-fn html-cljs.demo/init}}
    

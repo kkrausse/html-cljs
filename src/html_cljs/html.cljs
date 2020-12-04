@@ -1,34 +1,16 @@
 (ns html-cljs.html
-  "html library with two main concepts
-  component - a curried function ComponentLifecycle -> props -> ElementInfo
-    when state is changed, rerender only triggers the props->ElementInfo part
-    of this function
-  hook - a curried function ComponentLifecycle -> props -> user-data
-    where user-data can be anything. Used inside of a component for
-    functionality like cleanup or state manipulation, etc"
-  (:require-macros  [html-cljs.html])
   (:require [html-cljs.lifecycle :as lifecycle]
+            [html-cljs.nouns :refer [bind-lifecycle]]
             [clojure.walk :as walk]))
-
 
 (declare mount
          steralized
          add-callbacks
          rm-callbacks
          set-style
+         elem
          component->VDomNode
          extendzip)
-
-(defn use-state [clc]
-  (let [zeroth-value (symbol 'html-cljs.hooks 'rarespare)
-        state-atom (atom zeroth-value)]
-    (fn [initial-state]
-      (if (= @state-atom zeroth-value)
-        (reset! state-atom initial-state))
-      [(fn [] @state-atom)
-       (fn [swap]
-         (lifecycle/refresh clc)
-         (swap! state-atom swap))])))
 
 (defprotocol InternalLifecycle
   (destroy-node [_] "user-defined ondestroy callbacks")
@@ -82,8 +64,9 @@
     (rm-callbacks html-elem on)
     (.remove html-elem)))
 
-(defrecord VDomNode [props-atm hooked-component-atm child-nodes-atm html-elem-atm cached-render-atm
-                     onmounts-atm ondestroys-atm]
+(defrecord VDomNode [props-atm hooked-component-atm
+                     child-nodes-atm html-elem-atm cached-render-atm
+                     onmounts-atm ondestroys-atm hook-data]
   InternalLifecycle
   (destroy-node [_]
     (doseq [child @child-nodes-atm]
@@ -127,12 +110,10 @@
 
   lifecycle/LifecycleHooks
   (rerender [this new-props]
-    (let [new-elem-info (apply @hooked-component-atm new-props)]
+    (let [new-elem-info (@hooked-component-atm new-props)]
       (if (= (steralized new-elem-info) (steralized @cached-render-atm))
         (replace-wrapper @cached-render-atm @html-elem-atm new-elem-info)
         (replace-html this new-elem-info))
-
-      ; update children by checking props
       (doseq
         [[[child-node old-component old-props]
           [new-component new-props]]
@@ -158,13 +139,28 @@
       (reset! props-atm new-props)
       this))
   (getprops [this] @props-atm)
+  (add-hook [this]
+    (let [hook-num (:current @hook-data)]
+      (swap! hook-data update :current inc); update for next hook
+      (if (< (:current @hook-data) (count (:user-data @hook-data)))
+        (-> @hook-data :user-data (get hook-num))
+        (do
+          (swap! hook-data update :user-data (fn [old] (conj old (atom nil))))
+          (-> @hook-data :user-data (get hook-num))))))
   (on-mount [_ f] (swap! onmounts-atm #(conj % f)))
   (on-destroy [_ f] (swap! ondestroys-atm #(conj % f))))
 
+(defn elem [elem-data & children]
+  "helper to create elements"
+  (map->ElementInfo
+    (assoc elem-data
+           :children (map (fn [[h & t]] [h t]) children))))
+
+; component lifecycle. Used in hooks when rendering.
+(def ^:dynamic *clc* nil)
+
 (defn component->VDomNode
-  "create (and bind to html-dom) a full VDomNode from this component.
-  the 2 param version creates it from scratch
-  3 param version tries to reuse the html-element supplied with the old node"
+  "create (and bind to html-dom) a full VDomNode from this component"
   ([component props]
    (let [node (map->VDomNode {:props-atm (atom props)
                               :hooked-component-atm (atom nil)
@@ -172,15 +168,20 @@
                               :html-elem-atm (atom nil)
                               :cached-render-atm (atom nil)
                               :onmounts-atm (atom [])
-                              :ondestroys-atm (atom [])})
-         hooked-component (component node)
-         elem-info (apply hooked-component props)]
+                              :ondestroys-atm (atom [])
+                              :hook-data (atom {:current 0
+                                                :user-data []})})
+         hooked-component (fn [props]
+                            (swap! (:hook-data node) assoc :current 0)
+                            (binding [*clc* node]
+                                      (apply component props)))
+         elem-info (hooked-component props)]
      (reset! (:hooked-component-atm node) hooked-component)
      (reset! (:html-elem-atm node) (create-html-elem elem-info))
      (reset! (:cached-render-atm node) elem-info)
      (doseq [[child-component props] (:children elem-info)]
        (add-child node
-                  (component->VDomNode child-component props node)))
+                  (component->VDomNode child-component props)))
      (mount-node node)
      node)))
 
@@ -193,10 +194,6 @@
                   (concat l (map #(do nil)
                                  (range (- maxlen (count l))))))
                 ls))))
-
-
-
-(defn update-children [children])
 
 (defn steralized [elem-info]
   "customized update for styles and callbacks"

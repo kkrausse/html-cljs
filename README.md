@@ -1,15 +1,21 @@
 # html cljs
 
-small library that has everything you need for making nice html.
+small library for making nice html. Inspired by React js.
 
 demo timer component is available in demo.cljs
 
 ## Nouns
 
-*Components* are functions
+*Hook* a function that takes in props and uses the dynamically bound `*clc*`
+  variable to hook into the components lifecycle. the ComponentLifecycle has
+  add-hook method defined on it that gives the hook access to data.
+  The way this works requires (like React js) hooks to be called unconditionally
+  each time the component is called.
 
-*Hooks* are higher-order functions that can you can attatch events to the dom
-elements to
+*Components* Regular functions that return an ElementInfo record
+
+*ElementInfo* is a record that has all the information needed to create a dom element.
+Children is a sequence of Components.
 
 ## Running / Publishing
 
@@ -27,10 +33,6 @@ publish to clojars
     # username is kkrausse and paste a clojars token for password
 
 ## TODO
-
-- change hook and component to be records. That way it's tipesafe and using
-  instance? you could fix the macro making it so that one could call hooks
-  anywhere
 
 - change the `(and (not= (hash old-component) (hash new-component))...` because it
   will not rerender if a totally different component has the same props, or

@@ -1,4 +1,4 @@
-(defproject org.clojars.kkrausse/html-cljs "1.1.0"
+(defproject org.clojars.kkrausse/html-cljs "1.1.1"
   :description "small library that has everything you need for making nice html"
   :url "https://github.com/kkrausse/html-cljs"
 

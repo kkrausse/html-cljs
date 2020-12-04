@@ -1,10 +1,9 @@
 (ns html-cljs.demo
-  (:require-macros [html-cljs.hooks :refer [mkhook]]
-                   [html-cljs.html :refer [cmp]])
   (:require [html-cljs.html :as html]
             [html-cljs.hooks :refer [use-state use-effect use-interval]]
             [html-cljs.hooks :as hooks]
-            [clojure.pprint :refer [pprint]]))
+            [clojure.pprint :refer [pprint]]
+            [clojure.walk :as walk]))
 
 (declare
   timer)
@@ -26,24 +25,15 @@
   
   )
 
-
-(def button (cmp [label onclick & color]
-                 {:type "button"
-                  :content label
-                  :style {"background-color" (if-let [c (first color)] c "red")}
-                  :on {"mouseup" onclick}}))
-
-(def label (cmp [text]
-                {:type "div" :content text}))
-
-
-; TODO: make so we pass cmp a quoted structure so things are interpolated like
-; a macro at runtime. Will basically be an analog to doing `{}` in react components
-(def timer (cmp [] [[secs toggle-time] (use-interval 100)]
-     {:type "div"}
-     (list
-       (list (cmp [text]
-                  {:type "div" :content text}) "kevin's timer")
-       (list label
-             (str "time: " (int (/ secs 10)) "." (mod secs 10)))
-       (list button "start/stop" toggle-time "grey"))))
+(defn timer []
+  (let [[get-state set-state] (use-state 0)
+        [secs toggle] (use-interval 10)
+        click (fn [] (set-state inc))]
+  (html/elem {:type "div"}
+    (list html/elem {:type "div" :content (str "count: " (get-state))})
+    (list html/elem {:type "div"
+                 :content (str "time: " (int (/ secs 100)) "." (mod secs 100))})
+    (list html/elem {:type "button"
+             :content "start/stop"
+             :style {"background-color" "cyan"}
+             :on {"mouseup" (fn [] (toggle) (set-state inc))}}))))
